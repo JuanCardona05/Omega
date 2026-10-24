@@ -1,6 +1,12 @@
 name: Release Omega
 
 on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag to build and publish
+        required: true
+        type: string
   push:
     tags:
       - 'v*.*.*'
@@ -8,6 +14,8 @@ on:
 jobs:
   build-and-publish:
     runs-on: windows-latest
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
 
     permissions:
       contents: write
@@ -15,6 +23,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v7.1.0
@@ -29,29 +39,58 @@ jobs:
         shell: pwsh
         run: |
           $packageVersion = node -p "require('./package.json').version"
-          $tagVersion = $env:GITHUB_REF_NAME.TrimStart('v')
+          $tagVersion = $env:RELEASE_TAG.TrimStart('v')
           if ($tagVersion -ne $packageVersion) {
             throw "Git tag v$tagVersion does not match package.json version $packageVersion"
           }
 
-      - name: Build and publish Windows installer
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run build && npx electron-builder --win nsis --publish always
+      - name: Build Windows installer and update metadata
+        run: |
+          npm run build
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npx electron-builder --win nsis --publish never
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Ensure NSIS blockmap is published
+      - name: Publish all update assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: pwsh
         run: |
           $version = node -p "require('./package.json').version"
-          $source = Join-Path "release" "Omega Setup $version.exe.blockmap"
-          if (-not (Test-Path -LiteralPath $source)) {
-            throw "NSIS blockmap was not generated: $source"
+          $sources = @(
+            (Join-Path "release" "Omega Setup $version.exe"),
+            (Join-Path "release" "latest.yml"),
+            (Join-Path "release" "Omega Setup $version.exe.blockmap")
+          )
+          foreach ($source in $sources) {
+            if (-not (Test-Path -LiteralPath $source)) {
+              throw "Required update asset was not generated: $source"
+            }
           }
-          $asset = Join-Path $env:RUNNER_TEMP "Omega-Setup-$version.exe.blockmap"
-          Copy-Item -LiteralPath $source -Destination $asset -Force
-          gh release upload $env:GITHUB_REF_NAME $asset --repo "JuanCardona05/Omega" --clobber
+
+          $manifest = Get-Content -LiteralPath (Join-Path "release" "latest.yml") -Raw
+          if ($manifest -notmatch "(?m)^version: $([regex]::Escape($version))$" -or
+              $manifest -notmatch "(?m)^  - url: Omega-Setup-$([regex]::Escape($version))\.exe$") {
+            throw "latest.yml does not match version $version or its installer filename."
+          }
+
+          $assets = @(
+            (Join-Path $env:RUNNER_TEMP "Omega-Setup-$version.exe"),
+            (Join-Path $env:RUNNER_TEMP "latest.yml"),
+            (Join-Path $env:RUNNER_TEMP "Omega-Setup-$version.exe.blockmap")
+          )
+          for ($index = 0; $index -lt $sources.Count; $index++) {
+            Copy-Item -LiteralPath $sources[$index] -Destination $assets[$index] -Force
+          }
+
+          gh release view $env:RELEASE_TAG --repo "JuanCardona05/Omega" *> $null
+          $releaseExists = $LASTEXITCODE -eq 0
+          if ($releaseExists) {
+            $ghArgs = @("release", "upload", $env:RELEASE_TAG) + $assets + @("--repo", "JuanCardona05/Omega", "--clobber")
+          } else {
+            $ghArgs = @("release", "create", $env:RELEASE_TAG, "--repo", "JuanCardona05/Omega", "--verify-tag", "--title", "Omega $env:RELEASE_TAG", "--notes", "Omega desktop release $env:RELEASE_TAG") + $assets
+          }
+          gh @ghArgs
           if ($LASTEXITCODE -ne 0) {
-            throw "Could not upload the NSIS blockmap to the release."
+            throw "Could not publish all update assets for $env:RELEASE_TAG."
           }
