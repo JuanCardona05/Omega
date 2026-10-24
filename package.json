@@ -11,6 +11,7 @@
     "dev:electron": "concurrently -k \"vite --host 127.0.0.1 --strictPort\" \"wait-on http://127.0.0.1:5173 && electron .\"",
     "build": "vite build",
     "build:electron": "npm run build && electron-builder",
+    "release:electron": "npm run build && electron-builder --publish always",
     "lint": "oxlint",
     "preview": "vite preview"
   },
@@ -44,8 +45,8 @@
     ],
     "publish": {
       "provider": "github",
-      "owner": "your-github-user",
-      "repo": "omega-pos",
+      "owner": "JuanCardona05",
+      "repo": "Omega",
       "releaseType": "release"
     },
     "win": {
