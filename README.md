@@ -27,14 +27,11 @@ El instalador de Windows se genera en `release/`. La compilación web sigue disp
 
 La aplicación usa `electron-updater` para comprobar actualizaciones en la versión empaquetada. En modo desarrollo no se ejecutan comprobaciones; la lógica está activa solo para la build de producción y el instalador NSIS de Windows.
 
-Para publicar versiones:
+El proveedor está configurado para el repositorio público `JuanCardona05/Omega`. Los clientes no requieren una cuenta de GitHub ni credenciales para consultar y descargar sus releases. Un repositorio privado no permite ese acceso anónimo: no incluyas tokens personales en la aplicación.
 
-1. Crea un release público o privado en GitHub con el repositorio correcto.
-2. Ajusta `package.json` con el usuario/organización y el nombre del repositorio en `build.publish`.
-3. Genera el instalador con `npm run build:electron`.
-4. Publica el artefacto usando `electron-builder --publish always` o desde GitHub Actions.
+Para publicar una versión, actualiza `version` en `package.json` y `package-lock.json`, confirma y sube esos cambios a `main`, y luego crea y sube un tag correspondiente (`v1.0.0` para la versión `1.0.0`). El workflow `.github/workflows/release.yml` compila el instalador NSIS de Windows y publica el release al recibir el tag. El workflow requiere permiso `contents: write` para `GITHUB_TOKEN`.
 
-La aplicación cliente consultará esa feed de GitHub Releases y descargará los binarios del instalador o los artefactos compatibles con `electron-updater` sin requerir que el usuario acceda al repositorio.
+La publicación genera el instalador, `latest.yml` y el `.blockmap` para electron-updater. Las actualizaciones entre versiones deben probarse con una versión instalada anterior y una release posterior.
 
 Los datos y la sesión se guardan localmente en el perfil de la aplicación Electron; no se requiere conexión a internet para ejecutar la versión de escritorio.
 
