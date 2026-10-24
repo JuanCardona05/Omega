@@ -1,0 +1,65 @@
+{
+  "name": "demomarket",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Punto de venta Omega para escritorio",
+  "author": "Omega",
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "vite",
+    "dev:electron": "concurrently -k \"vite --host 127.0.0.1 --strictPort\" \"wait-on http://127.0.0.1:5173 && electron .\"",
+    "build": "vite build",
+    "build:electron": "npm run build && electron-builder",
+    "lint": "oxlint",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.11",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "concurrently": "^9.2.1",
+    "electron": "^41.0.0",
+    "electron-builder": "^26.0.12",
+    "oxlint": "^1.81.0",
+    "vite": "^8.3.0",
+    "wait-on": "^8.0.3"
+  },
+  "build": {
+    "appId": "com.demomarket.pos",
+    "productName": "Omega",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "public/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "publish": {
+      "provider": "github",
+      "owner": "your-github-user",
+      "repo": "omega-pos",
+      "releaseType": "release"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "public/omega-icon.ico",
+      "executableName": "Omega"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "Omega.exe",
+      "installerIcon": "public/omega-icon.ico",
+      "uninstallerIcon": "public/omega-icon.ico",
+      "installerHeaderIcon": "public/omega-icon.ico"
+    }
+  }
+}
