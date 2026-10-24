@@ -84,8 +84,14 @@ function App() {
     }
 
     const unsubscribe = api.onUpdateState(handleState)
-    api.getAppVersion().then((version) => setInstalledVersion(version || '0.0.0')).catch(() => setInstalledVersion('0.0.0'))
-    api.checkForUpdates().catch(() => undefined)
+    Promise.all([api.getAppVersion(), api.getUpdateState()])
+      .then(([version, state]) => {
+        setInstalledVersion(version || '0.0.0')
+        setUpdateState((current) => ({ ...current, ...state }))
+      })
+      .catch((error) => {
+        console.error('No se pudo cargar el estado de actualización.', error)
+      })
 
     return () => { if (unsubscribe) unsubscribe() }
   }, [])
@@ -688,6 +694,7 @@ function App() {
             {updateState.status === 'downloaded' && (
               <p className="update-message success">La actualización está lista para instalarse.</p>
             )}
+            <p className="update-data-notice">Tus facturas y productos se conservan en el perfil local durante la actualización.</p>
 
             <label className="update-toggle">
               <input

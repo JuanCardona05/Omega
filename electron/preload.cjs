@@ -10,6 +10,7 @@ ipcRenderer.on('update-state', (event, state) => {
 
 contextBridge.exposeInMainWorld('electronAPI', {
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  getUpdateState: () => ipcRenderer.invoke('get-update-state'),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   installUpdate: () => ipcRenderer.invoke('install-update'),
   dismissUpdate: () => ipcRenderer.invoke('dismiss-update'),

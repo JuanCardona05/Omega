@@ -153,6 +153,7 @@ const createWindow = async () => {
 }
 
 ipcMain.handle('get-app-version', () => app.getVersion())
+ipcMain.handle('get-update-state', () => ({ ...updateState }))
 
 ipcMain.handle('check-for-updates', async () => {
   if (!app.isPackaged) {
@@ -169,6 +170,10 @@ ipcMain.handle('check-for-updates', async () => {
 })
 
 ipcMain.handle('install-update', () => {
+  if (criticalOperationInProgress) {
+    return { ok: false, message: 'Finaliza la operación de facturación antes de actualizar.' }
+  }
+
   if (updateState.status === 'downloaded') {
     autoUpdater.quitAndInstall(true, true)
     return { ok: true }
