@@ -38,3 +38,20 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run build && npx electron-builder --win nsis --publish always
+
+      - name: Ensure NSIS blockmap is published
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          $version = node -p "require('./package.json').version"
+          $source = Join-Path "release" "Omega Setup $version.exe.blockmap"
+          if (-not (Test-Path -LiteralPath $source)) {
+            throw "NSIS blockmap was not generated: $source"
+          }
+          $asset = Join-Path $env:RUNNER_TEMP "Omega-Setup-$version.exe.blockmap"
+          Copy-Item -LiteralPath $source -Destination $asset -Force
+          gh release upload $env:GITHUB_REF_NAME $asset --repo "JuanCardona05/Omega" --clobber
+          if ($LASTEXITCODE -ne 0) {
+            throw "Could not upload the NSIS blockmap to the release."
+          }
