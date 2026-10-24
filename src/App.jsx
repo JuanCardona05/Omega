@@ -475,7 +475,7 @@ function App() {
   }
 
   const pageTitles = {
-    dashboard: ['Dashboard', 'Resumen operativo de tu negocio'],
+    dashboard: ['Dashboard', 'Resumen operativo de tu negocio · actualizaciones automáticas'],
     sale: ['Nueva venta', 'Procesa una venta de forma rápida y precisa'],
     inventory: ['Inventario', 'Productos, existencias y precios'],
     invoices: ['Facturas', 'Comprobantes generados recientemente'],
