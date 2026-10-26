@@ -6,6 +6,7 @@ import { finalizeSale as finalizeSaleApplication } from './services/salesApplica
 import { closeCashRegister as closeCash, createCashHistoryEntry, openCashRegister as openCash, rollCashRegisterToDate } from './services/cashService'
 import { validateProduct } from './utils/validation'
 import { dateToInputValue, formatCurrency, todayIs } from './utils/formatters'
+import { getAdminContactUrl } from './utils/contactLinks'
 import { authenticate, getValidSession, logout as logoutUser } from './services/authService'
 import { authorize, can, permissions } from './services/permissions'
 import { defaultBusiness, defaultCashRegister, defaultCategories, defaultProducts, defaultUsers } from './data/storeDefaults'
@@ -617,7 +618,7 @@ function App() {
           </div>
           <div className="header-actions">
             <span className={cashRegister.isOpen ? 'header-status' : 'header-status closed'}><span className="status-dot" /> Caja {cashRegister.isOpen ? 'abierta' : 'cerrada'}</span>
-            {session.role === 'EMPLOYEE' && <a className="contact-admin-link" href={`mailto:${business.adminEmail}?subject=Soporte%20Omega`}>Contactar administrador</a>}
+            {session.role === 'EMPLOYEE' && <a className="contact-admin-link" href={getAdminContactUrl(business.adminEmail, 'Soporte Omega')} target="_blank" rel="noreferrer">Contactar administrador</a>}
             <div className="user-chip"><span className="avatar">{session.name.slice(0, 2).toUpperCase()}</span><span>{session.name} · {session.role === 'ADMIN' ? 'Administrador' : 'Empleado'}</span><button type="button" className="ghost-btn tiny" onClick={logout}>Cerrar sesión</button></div>
           </div>
         </header>

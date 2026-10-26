@@ -1,7 +1,7 @@
 {
   "name": "demomarket",
   "private": true,
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Punto de venta Omega para escritorio",
   "author": "Omega",
   "type": "module",

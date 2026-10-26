@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { getAdminContactUrl } from '../utils/contactLinks'
 
 function Login({ businessName, adminEmail, onLogin }) {
   const [username, setUsername] = useState('')
@@ -30,7 +31,7 @@ function Login({ businessName, adminEmail, onLogin }) {
         <label>Contraseña<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" /></label>
         <button className="primary-btn" type="submit" disabled={submitting}>{submitting ? 'Validando...' : 'Iniciar sesión'}</button>
         <p className="login-help">¿Necesitas acceso? Solicítalo al administrador del negocio.</p>
-        <a className="contact-admin-btn" href={`mailto:${adminEmail}?subject=Solicitar%20acceso%20a%20Omega`}>Contactar al administrador</a>
+        <a className="contact-admin-btn" href={getAdminContactUrl(adminEmail, 'Solicitar acceso a Omega')} target="_blank" rel="noreferrer">Contactar al administrador</a>
       </form>
     </main>
   )
