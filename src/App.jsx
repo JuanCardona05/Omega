@@ -4,7 +4,7 @@ import { loadStoreState as loadPersistedState, saveStoreState } from './services
 import { getLowStockProducts } from './services/inventoryService'
 import { finalizeSale as finalizeSaleApplication } from './services/salesApplicationService'
 import { closeCashRegister as closeCash, createCashHistoryEntry, openCashRegister as openCash, rollCashRegisterToDate } from './services/cashService'
-import { validateProduct } from './utils/validation'
+import { validateAdminEmail, validateCashClosing, validateCashOpeningAmount, validateProduct, validateUserAccount } from './utils/validation'
 import { dateToInputValue, formatCurrency, todayIs } from './utils/formatters'
 import { getAdminContactUrl } from './utils/contactLinks'
 import { authenticate, getValidSession, logout as logoutUser } from './services/authService'
@@ -270,33 +270,43 @@ function App() {
     return true
   }
 
-  const openCashRegister = () => {
+  const openCashRegister = (openingAmount) => {
     if (!can(session, permissions.CASH_OPEN)) {
       notify('No tienes permisos para realizar esta acción.', 'warning')
+      return
+    }
+    const validationError = validateCashOpeningAmount(openingAmount)
+    if (validationError) {
+      notify(validationError, 'error')
       return
     }
     setCashRegister(openCash({
       number: cashRegister.number,
       operator: session.name,
-      openingAmount: cashRegister.openingAmount,
+      openingAmount: Number(openingAmount),
       businessDate: todayIs(),
     }))
     notify('Caja abierta correctamente.', 'success')
   }
 
-  const closeCashRegister = () => {
+  const closeCashRegister = (countedAmount) => {
     if (!can(session, permissions.CASH_CLOSE)) {
       notify('No tienes permisos para realizar esta acción.', 'warning')
+      return
+    }
+    const validationError = validateCashClosing(countedAmount)
+    if (validationError) {
+      notify(validationError, 'error')
       return
     }
     const cashDate = cashRegister.businessDate || dateToInputValue(new Date(cashRegister.openedAt))
     const cashSales = sales
       .filter((sale) => dateToInputValue(new Date(sale.date)) === cashDate)
       .reduce((total, sale) => total + Number(sale.total || 0), 0)
-    const expectedCash = Number(cashRegister.openingAmount || 0) + cashSales
-    const closedCashRegister = closeCash(cashRegister, expectedCash, session.name)
+    const actualCountedAmount = Number(countedAmount)
+    const closedCashRegister = closeCash(cashRegister, actualCountedAmount, session.name)
     setCashRegister(closedCashRegister)
-    const historyEntry = createCashHistoryEntry(cashRegister, cashSales, expectedCash, session.name)
+    const historyEntry = createCashHistoryEntry(cashRegister, cashSales, actualCountedAmount, session.name)
     setCashHistory((current) => [
       ...current.filter((entry) => entry.date !== historyEntry.date),
       historyEntry,
@@ -346,22 +356,30 @@ function App() {
       notify('No tienes permisos para realizar esta acción.', 'warning')
       return
     }
-    if (!business.name.trim()) {
+    const name = business.name.trim()
+    if (!name) {
       notify('El nombre del negocio es obligatorio.', 'error')
       return
     }
-    setBusiness((current) => ({ ...current, name: current.name.trim(), nit: current.nit.trim(), address: current.address.trim(), phone: current.phone.trim(), footer: current.footer.trim() }))
+    const emailError = validateAdminEmail(business.adminEmail)
+    if (emailError) {
+      notify(emailError, 'error')
+      return
+    }
+    setBusiness((current) => ({
+      ...current,
+      name,
+      nit: current.nit.trim(),
+      address: current.address.trim(),
+      phone: current.phone.trim(),
+      adminEmail: current.adminEmail.trim(),
+      footer: current.footer.trim(),
+    }))
     notify('Configuración guardada.', 'success')
   }
 
   const validateUserPayload = (payload, editingId = null) => {
-    const name = payload.name.trim()
-    const username = payload.username.trim().toLowerCase()
-    if (!name || !username || (!editingId && !payload.password)) return 'Completa nombre, usuario y contraseña.'
-    if (users.some((user) => user.username.toLowerCase() === username && user.id !== editingId)) return 'Ese nombre de usuario ya existe.'
-    if (!['ADMIN', 'EMPLOYEE'].includes(payload.role)) return 'El rol seleccionado no es válido.'
-    if (!editingId && payload.role === 'ADMIN') return 'Solo se pueden crear empleados desde este módulo.'
-    return null
+    return validateUserAccount(payload, users, editingId)
   }
 
   const createUser = (payload) => runAuthorized(permissions.USERS_MANAGE, () => {
@@ -375,8 +393,11 @@ function App() {
   const updateUser = (userId, payload) => runAuthorized(permissions.USERS_MANAGE, () => {
     const validationError = validateUserPayload(payload, userId)
     if (validationError) return { ok: false, error: validationError }
-    setUsers((current) => current.map((user) => user.id === userId ? { ...user, name: payload.name.trim(), username: payload.username.trim().toLowerCase(), role: payload.role, ...(payload.password ? { password: payload.password } : {}) } : user))
-    if (session?.userId === userId) setSession(getValidSession(users.map((user) => user.id === userId ? { ...user, ...payload } : user)))
+    const updatedUsers = users.map((user) => user.id === userId
+      ? { ...user, name: payload.name.trim(), username: payload.username.trim().toLowerCase(), role: payload.role, ...(payload.password ? { password: payload.password } : {}) }
+      : user)
+    setUsers(updatedUsers)
+    if (session?.userId === userId) setSession(getValidSession(updatedUsers))
     notify('Usuario actualizado correctamente.', 'success')
     return { ok: true }
   }) || { ok: false, error: 'No tienes permisos para realizar esta acción.' }
@@ -440,11 +461,11 @@ function App() {
           <form className="panel settings-form" onSubmit={saveBusinessSettings}>
             <div className="form-section-title">Información del negocio</div>
             <div className="form-grid">
-              <label>Nombre del negocio<input value={business.name} onChange={(event) => setBusiness({ ...business, name: event.target.value })} /></label>
+              <label>Nombre del negocio<input required value={business.name} onChange={(event) => setBusiness({ ...business, name: event.target.value })} /></label>
               <label>NIT o identificación<input value={business.nit} onChange={(event) => setBusiness({ ...business, nit: event.target.value })} /></label>
               <label>Dirección<input value={business.address} onChange={(event) => setBusiness({ ...business, address: event.target.value })} /></label>
               <label>Teléfono<input value={business.phone} onChange={(event) => setBusiness({ ...business, phone: event.target.value })} /></label>
-              <label>Correo del administrador<input type="email" value={business.adminEmail} onChange={(event) => setBusiness({ ...business, adminEmail: event.target.value })} /></label>
+              <label>Correo del administrador<input type="email" required autoComplete="email" value={business.adminEmail} onChange={(event) => setBusiness({ ...business, adminEmail: event.target.value })} /></label>
               <label className="full-width">Mensaje al final del comprobante<input value={business.footer} onChange={(event) => setBusiness({ ...business, footer: event.target.value })} /></label>
             </div>
             <button className="primary-btn" type="submit">Guardar configuración</button>

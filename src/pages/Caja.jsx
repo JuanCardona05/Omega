@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { dateToInputValue, formatCurrency } from '../utils/formatters'
+import { getSuggestedOpeningAmount } from '../services/cashService'
 
 function Caja({
   cashRegister,
@@ -10,6 +11,13 @@ function Caja({
   onCloseCash,
 }) {
   const [selectedDate, setSelectedDate] = useState(today)
+  const suggestedOpeningAmount = getSuggestedOpeningAmount(cashRegister)
+  const cashInputKey = `${today}:${cashRegister.isOpen}:${cashRegister.openedAt || cashRegister.closedAt || 'closed'}`
+  const [openingAmountEdit, setOpeningAmountEdit] = useState(null)
+  const [countedAmountEdit, setCountedAmountEdit] = useState(null)
+  const openingAmountInput = openingAmountEdit?.key === cashInputKey
+    ? openingAmountEdit.value
+    : String(suggestedOpeningAmount)
   const dailySales = useMemo(
     () => sales.filter((sale) => dateToInputValue(new Date(sale.date)) === selectedDate),
     [sales, selectedDate],
@@ -24,6 +32,9 @@ function Caja({
   const expectedCash = isToday
     ? Number(cashRegister.openingAmount || 0) + dailyCashSales
     : historicalCash?.expectedAmount
+  const countedAmountInput = countedAmountEdit?.key === cashInputKey
+    ? countedAmountEdit.value
+    : String(expectedCash ?? 0)
   const closedToday = cashRegister.closedAt
     && dateToInputValue(new Date(cashRegister.closedAt)) === selectedDate
   const countedAmount = isToday && closedToday ? cashRegister.countedAmount : historicalCash?.countedAmount
@@ -56,10 +67,23 @@ function Caja({
             <p className="empty-text">Selecciona la fecha de hoy para abrir o cerrar la caja.</p>
           ) : (
             <div className="product-form">
-              {cashRegister.isOpen && <p className="form-help">Al cerrar se registrará el efectivo esperado: {formatCurrency(expectedCash)}.</p>}
-              <button className="primary-btn" type="button" onClick={cashRegister.isOpen ? onCloseCash : onOpenCash}>
-                {cashRegister.isOpen ? 'Cerrar caja' : 'Abrir caja'}
-              </button>
+              {cashRegister.isOpen ? (
+                <>
+                  <label>Efectivo contado en caja al cierre
+                    <input type="number" min="0" step="0.01" required value={countedAmountInput} onChange={(event) => setCountedAmountEdit({ key: cashInputKey, value: event.target.value })} />
+                  </label>
+                  <p className="form-help">Efectivo esperado: {formatCurrency(expectedCash)}. Ingresa lo que realmente queda en caja.</p>
+                  <button className="primary-btn" type="button" onClick={() => onCloseCash(countedAmountInput)}>Cerrar caja</button>
+                </>
+              ) : (
+                <>
+                  <label>Dinero inicial de caja
+                    <input type="number" min="0" step="0.01" required value={openingAmountInput} onChange={(event) => setOpeningAmountEdit({ key: cashInputKey, value: event.target.value })} />
+                  </label>
+                  <p className="form-help">Se propone el efectivo contado al último cierre. Ajusta el monto si retiraron o agregaron dinero antes de abrir.</p>
+                  <button className="primary-btn" type="button" onClick={() => onOpenCash(openingAmountInput)}>Abrir caja</button>
+                </>
+              )}
             </div>
           )}
         </div>

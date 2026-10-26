@@ -99,6 +99,13 @@ export const openCashRegister = ({ number, operator, openingAmount, businessDate
   businessDate,
 })
 
+export const getSuggestedOpeningAmount = (cashRegister) => {
+  if (!cashRegister.isOpen && cashRegister.countedAmount !== '') {
+    return Number(cashRegister.countedAmount)
+  }
+  return Number(cashRegister.openingAmount || 0)
+}
+
 export const closeCashRegister = (cashRegister, countedAmount, closedBy) => ({
   ...cashRegister,
   isOpen: false,

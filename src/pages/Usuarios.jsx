@@ -34,9 +34,9 @@ function Usuarios({ users, currentUserId, onCreateUser, onToggleUser, onUpdateUs
         <form className="panel product-form" onSubmit={submit}>
           <div className="section-header"><h2>{editingId ? 'Editar usuario' : 'Crear usuario'}</h2></div>
           {error && <div className="login-error" role="alert">{error}</div>}
-          <label>Nombre<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
-          <label>Usuario<input value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} /></label>
-          <label>{editingId ? 'Nueva contraseña (opcional)' : 'Contraseña'}<input type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} /></label>
+          <label>Nombre<input required autoComplete="name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
+          <label>Usuario<input required autoComplete="username" value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} /></label>
+          <label>{editingId ? 'Nueva contraseña (opcional)' : 'Contraseña'}<input type="password" required={!editingId} minLength={8} autoComplete="new-password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} /></label>
           <label>Rol<select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })}><option value="EMPLOYEE">Empleado</option>{editingId && form.role === 'ADMIN' && <option value="ADMIN">Administrador</option>}</select></label>
           <div className="button-row"><button className="primary-btn" type="submit">{editingId ? 'Guardar cambios' : 'Crear usuario'}</button>{editingId && <button className="ghost-btn" type="button" onClick={() => { setEditingId(null); setForm(emptyForm) }}>Cancelar</button>}</div>
         </form>
